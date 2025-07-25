@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Carrito de Donas</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+            background-color: #f9f3e9;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+        th {
+            background-color: #f8f8f8;
+        }
+        .quantity-selector {
+            display: flex;
+            align-items: center;
+        }
+        .quantity-btn {
+            width: 30px;
+            height: 30px;
+            background: #ff9a9e;
+            border: none;
+            color: white;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .quantity-input {
+            width: 50px;
+            text-align: center;
+            margin: 0 10px;
+            padding: 5px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        .add-product {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .add-product select {
+            flex: 1;
+        }
+        .add-product button {
+            padding: 10px 15px;
+        }
+        .send-btn {
+            background: #e91e63;
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            width: 100%;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+        .send-btn:hover {
+            background: #c2185b;
+        }
+        select {
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+        }
+        .remove-btn {
+            color: #ff6b6b;
+            background: none;
+            border: none;
+            cursor: pointer;
+            font-size: 16px;
+            transition: transform 0.2s;
+        }
+        .remove-btn:hover {
+            transform: scale(1.2);
+        }
+        .total {
+            font-weight: bold;
+            font-size: 18px;
+            text-align: right;
+            margin-top: 20px;
+            padding: 10px;
+            background-color: #f8f8f8;
+            border-radius: 5px;
+        }
+        #addToCart {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+        #addToCart:hover {
+            background: #388E3C;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2>🍩 Carrito de Donas</h2>
+        
+        <div class="add-product">
+            <select id="donaType">
+                <option value="">Selecciona un tipo de dona</option>
+                <option value="D001">Dona Glaseada Clásica (Q8.00)</option>
+                <option value="D002">Dona de Chocolate (Q10.00)</option>
+                <option value="D003">Dona Rellena de Mermelada (Q12.00)</option>
+                <option value="D004">Dona con Sprinkles (Q9.00)</option>
+                <option value="D005">Dona de Canela (Q7.00)</option>
+            </select>
+            <button id="addToCart">Agregar al Carrito</button>
+        </div>
+        
+        <table id="cartTable">
+            <thead>
+                <tr>
+                    <th>Producto</th>
+                    <th>Precio Unitario</th>
+                    <th>Cantidad</th>
+                    <th>Subtotal</th>
+                    <th>Acciones</th>
+                </tr>
+            </thead>
+            <tbody id="cartItems">
+                <!-- Los productos se agregarán aquí dinámicamente -->
+            </tbody>
+        </table>
+        
+        <div class="total" id="totalAmount">Total: Q0.00</div>
+        
+        <form id="cartForm">
+            <button type="submit" class="send-btn">Continuar con el pedido</button>
+        </form>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Precios de las donas
+            const donaPrices = {
+                'D001': 8.00,
+                'D002': 10.00,
+                'D003': 12.00,
+                'D004': 9.00,
+                'D005': 7.00
+            };
+            
+            // Nombres de las donas
+            const donaNames = {
+                'D001': 'Dona Glaseada Clásica',
+                'D002': 'Dona de Chocolate',
+                'D003': 'Dona Rellena de Mermelada',
+                'D004': 'Dona con Sprinkles',
+                'D005': 'Dona de Canela'
+            };
+            
+            // Carrito de compras
+            let cart = JSON.parse(localStorage.getItem('donaCart')) || {};
+            
+            // Cargar carrito al iniciar
+            updateCartDisplay();
+            
+            // Agregar producto al carrito
+            document.getElementById('addToCart').addEventListener('click', function() {
+                const donaType = document.getElementById('donaType').value;
+                
+                if (!donaType) {
+                    alert('Por favor selecciona un tipo de dona');
+                    return;
+                }
+                
+                // Si el producto ya está en el carrito, solo actualizamos la cantidad
+                if (cart[donaType]) {
+                    cart[donaType].quantity += 1;
+                } else {
+                    // Si no está, lo agregamos
+                    cart[donaType] = {
+                        name: donaNames[donaType],
+                        price: donaPrices[donaType],
+                        quantity: 1
+                    };
+                }
+                
+                updateCartDisplay();
+                document.getElementById('donaType').value = ''; // Resetear el selector
+            });
+            
+            // Actualizar la visualización del carrito
+            function updateCartDisplay() {
+                const cartItems = document.getElementById('cartItems');
+                let total = 0;
+                
+                // Limpiar el carrito
+                cartItems.innerHTML = '';
+                
+                // Agregar cada producto al carrito
+                for (const [id, product] of Object.entries(cart)) {
+                    const subtotal = product.price * product.quantity;
+                    total += subtotal;
+                    
+                    // Agregar fila a la tabla
+                    const row = document.createElement('tr');
+                    row.dataset.id = id;
+                    row.innerHTML = `
+                        <td>${product.name}</td>
+                        <td>Q${product.price.toFixed(2)}</td>
+                        <td>
+                            <div class="quantity-selector">
+                                <button type="button" class="quantity-btn decrease">-</button>
+                                <input type="number" class="quantity-input" value="${product.quantity}" min="1">
+                                <button type="button" class="quantity-btn increase">+</button>
+                            </div>
+                        </td>
+                        <td>Q${subtotal.toFixed(2)}</td>
+                        <td><button type="button" class="remove-btn">✕</button></td>
+                    `;
+                    cartItems.appendChild(row);
+                }
+                
+                // Actualizar total
+                document.getElementById('totalAmount').textContent = `Total: Q${total.toFixed(2)}`;
+                
+                // Guardar en localStorage
+                localStorage.setItem('donaCart', JSON.stringify(cart));
+            }
+            
+            // Manejar eventos de cantidad y eliminación
+            document.addEventListener('click', function(e) {
+                if (e.target.classList.contains('increase')) {
+                    const row = e.target.closest('tr');
+                    const id = row.dataset.id;
+                    cart[id].quantity += 1;
+                    updateCartDisplay();
+                } else if (e.target.classList.contains('decrease')) {
+                    const row = e.target.closest('tr');
+                    const id = row.dataset.id;
+                    if (cart[id].quantity > 1) {
+                        cart[id].quantity -= 1;
+                        updateCartDisplay();
+                    }
+                } else if (e.target.classList.contains('remove-btn')) {
+                    const row = e.target.closest('tr');
+                    const id = row.dataset.id;
+                    delete cart[id];
+                    updateCartDisplay();
+                }
+            });
+            
+            // Manejar cambios directos en el input
+            document.addEventListener('change', function(e) {
+                if (e.target.classList.contains('quantity-input')) {
+                    const row = e.target.closest('tr');
+                    const id = row.dataset.id;
+                    const newQuantity = parseInt(e.target.value);
+                    
+                    if (newQuantity > 0) {
+                        cart[id].quantity = newQuantity;
+                        updateCartDisplay();
+                    } else {
+                        e.target.value = cart[id].quantity;
+                    }
+                }
+            });
+            
+            // Manejar envío del formulario
+            document.getElementById('cartForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                
+                if (Object.keys(cart).length === 0) {
+                    alert('Por favor agrega al menos un producto al carrito');
+                    return;
+                }
+                
+                // Redirigir al formulario de pedido
+                window.location.href = 'pedido.html';
+            });
+        });
+    </script>
+</body>
+</html>
