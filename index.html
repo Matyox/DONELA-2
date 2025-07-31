@@ -202,7 +202,7 @@ const firebaseConfig = {
         // Cargar carrito al iniciar
         loadCart();
         
-        document.getElementById('addToCart').addEventListener('click', function() {
+document.getElementById('addToCart').addEventListener('click', async function() {
     const donaType = document.getElementById('donaType').value;
     
     if (!donaType) {
@@ -210,34 +210,36 @@ const firebaseConfig = {
         return;
     }
     
-    // Mostrar feedback inmediato
-    console.log("Intentando agregar:", donaType);
-    
-    cartRef.get().then((doc) => {
-        const cart = doc.exists ? doc.data().items || {} : {};
+    try {
+        const doc = await cartRef.get();
+        let cart = doc.exists ? doc.data().items || [] : [];
         
-        if (cart[donaType]) {
-            cart[donaType].quantity += 1;
+        // Buscar si el producto ya está en el carrito
+        const existingItem = cart.find(item => item.id === donaType);
+        
+        if (existingItem) {
+            existingItem.quantity += 1;
         } else {
-            cart[donaType] = {
+            cart.push({
+                id: donaType,
                 name: donaNames[donaType],
                 price: donaPrices[donaType],
                 quantity: 1
-            };
+            });
         }
         
-        return cartRef.set({
+        await cartRef.set({
             items: cart,
             lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         });
-    }).then(() => {
+        
         console.log("Producto agregado correctamente");
         updateCartDisplay();
         document.getElementById('donaType').value = '';
-    }).catch((error) => {
+    } catch (error) {
         console.error("Error al agregar producto:", error);
-        alert("Ocurrió un error al agregar la dona. Por favor intenta nuevamente.");
-    });
+        alert(`Error al agregar la dona: ${error.message}`);
+    }
 });
         
         // Cargar carrito desde Firestore
