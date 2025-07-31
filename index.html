@@ -308,15 +308,12 @@ const firebaseConfig = {
                         delete cart[id];
                     }
                     
-                    return cartRef.set({
-                        items: cart,
-                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                    });
-                }).then(() => {
-                    updateCartDisplay();
-                });
-            }
-        });
+return cartRef.set({
+    items: cart,
+    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+}).then(() => {
+    updateCartDisplay();
+}).catch(error => alert("Error al guardar: " + error));  // <-- ¡Sin punto antes de .catch!
         
         // Manejar cambios directos en el input
         document.addEventListener('change', function(e) {
