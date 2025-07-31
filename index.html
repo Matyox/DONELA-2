@@ -202,38 +202,43 @@ const firebaseConfig = {
         // Cargar carrito al iniciar
         loadCart();
         
-        // Agregar producto al carrito
         document.getElementById('addToCart').addEventListener('click', function() {
-            const donaType = document.getElementById('donaType').value;
-            
-            if (!donaType) {
-                alert('Por favor selecciona un tipo de dona');
-                return;
-            }
-            
-            // Actualizar el carrito en Firestore
-            cartRef.get().then((doc) => {
-                const cart = doc.exists ? doc.data().items || {} : {};
-                
-                if (cart[donaType]) {
-                    cart[donaType].quantity += 1;
-                } else {
-                    cart[donaType] = {
-                        name: donaNames[donaType],
-                        price: donaPrices[donaType],
-                        quantity: 1
-                    };
-                }
-                
-                return cartRef.set({
-                    items: cart,
-                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-                });
-            }).then(() => {
-                updateCartDisplay();
-                document.getElementById('donaType').value = '';
-            });
+    const donaType = document.getElementById('donaType').value;
+    
+    if (!donaType) {
+        alert('Por favor selecciona un tipo de dona');
+        return;
+    }
+    
+    // Mostrar feedback inmediato
+    console.log("Intentando agregar:", donaType);
+    
+    cartRef.get().then((doc) => {
+        const cart = doc.exists ? doc.data().items || {} : {};
+        
+        if (cart[donaType]) {
+            cart[donaType].quantity += 1;
+        } else {
+            cart[donaType] = {
+                name: donaNames[donaType],
+                price: donaPrices[donaType],
+                quantity: 1
+            };
+        }
+        
+        return cartRef.set({
+            items: cart,
+            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
         });
+    }).then(() => {
+        console.log("Producto agregado correctamente");
+        updateCartDisplay();
+        document.getElementById('donaType').value = '';
+    }).catch((error) => {
+        console.error("Error al agregar producto:", error);
+        alert("Ocurrió un error al agregar la dona. Por favor intenta nuevamente.");
+    });
+});
         
         // Cargar carrito desde Firestore
         function loadCart() {
