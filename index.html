@@ -156,47 +156,68 @@
             <button type="submit" class="send-btn">Continuar con el pedido</button>
         </form>
     </div>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.6.0/firebase-firestore-compat.js"></script>
+<script>
+    // For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: "AIzaSyAqD2f7AYOEzcwmiaoKjpjHxG8rhfm4rLw",
+  authDomain: "donaspedidos-f9cb9.firebaseapp.com",
+  projectId: "donaspedidos-f9cb9",
+  storageBucket: "donaspedidos-f9cb9.firebasestorage.app",
+  messagingSenderId: "748109050944",
+  appId: "1:748109050944:web:35798a82572b2430209ba5",
+  measurementId: "G-NW1KET3F5X"
+    };
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Precios de las donas
-            const donaPrices = {
-                'D001': 8.00,
-                'D002': 10.00,
-                'D003': 12.00,
-                'D004': 9.00,
-                'D005': 7.00
-            };
+    // Inicializar Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    document.addEventListener('DOMContentLoaded', function() {
+        // Precios y nombres de las donas
+        const donaPrices = {
+            'D001': 8.00,
+            'D002': 10.00,
+            'D003': 12.00,
+            'D004': 9.00,
+            'D005': 7.00
+        };
+        
+        const donaNames = {
+            'D001': 'Dona Glaseada Clásica',
+            'D002': 'Dona de Chocolate',
+            'D003': 'Dona Rellena de Mermelada',
+            'D004': 'Dona con Sprinkles',
+            'D005': 'Dona de Canela'
+        };
+        
+        // ID único para este carrito (podría ser generado o usar el ID de sesión)
+        let cartId = localStorage.getItem('cartId') || `cart_${Date.now()}`;
+        localStorage.setItem('cartId', cartId);
+        
+        // Referencia al carrito en Firestore
+        const cartRef = db.collection('carts').doc(cartId);
+        
+        // Cargar carrito al iniciar
+        loadCart();
+        
+        // Agregar producto al carrito
+        document.getElementById('addToCart').addEventListener('click', function() {
+            const donaType = document.getElementById('donaType').value;
             
-            // Nombres de las donas
-            const donaNames = {
-                'D001': 'Dona Glaseada Clásica',
-                'D002': 'Dona de Chocolate',
-                'D003': 'Dona Rellena de Mermelada',
-                'D004': 'Dona con Sprinkles',
-                'D005': 'Dona de Canela'
-            };
+            if (!donaType) {
+                alert('Por favor selecciona un tipo de dona');
+                return;
+            }
             
-            // Carrito de compras
-            let cart = JSON.parse(localStorage.getItem('donaCart')) || {};
-            
-            // Cargar carrito al iniciar
-            updateCartDisplay();
-            
-            // Agregar producto al carrito
-            document.getElementById('addToCart').addEventListener('click', function() {
-                const donaType = document.getElementById('donaType').value;
+            // Actualizar el carrito en Firestore
+            cartRef.get().then((doc) => {
+                const cart = doc.exists ? doc.data().items || {} : {};
                 
-                if (!donaType) {
-                    alert('Por favor selecciona un tipo de dona');
-                    return;
-                }
-                
-                // Si el producto ya está en el carrito, solo actualizamos la cantidad
                 if (cart[donaType]) {
                     cart[donaType].quantity += 1;
                 } else {
-                    // Si no está, lo agregamos
                     cart[donaType] = {
                         name: donaNames[donaType],
                         price: donaPrices[donaType],
@@ -204,24 +225,41 @@
                     };
                 }
                 
+                return cartRef.set({
+                    items: cart,
+                    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                });
+            }).then(() => {
                 updateCartDisplay();
-                document.getElementById('donaType').value = ''; // Resetear el selector
+                document.getElementById('donaType').value = '';
             });
-            
-            // Actualizar la visualización del carrito
-            function updateCartDisplay() {
+        });
+        
+        // Cargar carrito desde Firestore
+        function loadCart() {
+            cartRef.get().then((doc) => {
+                if (doc.exists) {
+                    updateCartDisplay();
+                }
+            });
+        }
+        
+        // Actualizar la visualización del carrito
+        function updateCartDisplay() {
+            cartRef.get().then((doc) => {
                 const cartItems = document.getElementById('cartItems');
                 let total = 0;
                 
-                // Limpiar el carrito
                 cartItems.innerHTML = '';
                 
-                // Agregar cada producto al carrito
+                if (!doc.exists) return;
+                
+                const cart = doc.data().items || {};
+                
                 for (const [id, product] of Object.entries(cart)) {
                     const subtotal = product.price * product.quantity;
                     total += subtotal;
                     
-                    // Agregar fila a la tabla
                     const row = document.createElement('tr');
                     row.dataset.id = id;
                     row.innerHTML = `
@@ -240,64 +278,87 @@
                     cartItems.appendChild(row);
                 }
                 
-                // Actualizar total
                 document.getElementById('totalAmount').textContent = `Total: Q${total.toFixed(2)}`;
-                
-                // Guardar en localStorage
-                localStorage.setItem('donaCart', JSON.stringify(cart));
-            }
-            
-            // Manejar eventos de cantidad y eliminación
-            document.addEventListener('click', function(e) {
-                if (e.target.classList.contains('increase')) {
-                    const row = e.target.closest('tr');
-                    const id = row.dataset.id;
-                    cart[id].quantity += 1;
-                    updateCartDisplay();
-                } else if (e.target.classList.contains('decrease')) {
-                    const row = e.target.closest('tr');
-                    const id = row.dataset.id;
-                    if (cart[id].quantity > 1) {
-                        cart[id].quantity -= 1;
-                        updateCartDisplay();
-                    }
-                } else if (e.target.classList.contains('remove-btn')) {
-                    const row = e.target.closest('tr');
-                    const id = row.dataset.id;
-                    delete cart[id];
-                    updateCartDisplay();
-                }
             });
-            
-            // Manejar cambios directos en el input
-            document.addEventListener('change', function(e) {
-                if (e.target.classList.contains('quantity-input')) {
-                    const row = e.target.closest('tr');
-                    const id = row.dataset.id;
-                    const newQuantity = parseInt(e.target.value);
+        }
+        
+        // Manejar eventos de cantidad y eliminación
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('increase') || 
+                e.target.classList.contains('decrease') || 
+                e.target.classList.contains('remove-btn')) {
+                
+                const row = e.target.closest('tr');
+                if (!row) return;
+                
+                const id = row.dataset.id;
+                
+                cartRef.get().then((doc) => {
+                    if (!doc.exists) return;
                     
-                    if (newQuantity > 0) {
-                        cart[id].quantity = newQuantity;
-                        updateCartDisplay();
-                    } else {
-                        e.target.value = cart[id].quantity;
+                    const cart = doc.data().items || {};
+                    
+                    if (e.target.classList.contains('increase')) {
+                        cart[id].quantity += 1;
+                    } else if (e.target.classList.contains('decrease')) {
+                        if (cart[id].quantity > 1) {
+                            cart[id].quantity -= 1;
+                        }
+                    } else if (e.target.classList.contains('remove-btn')) {
+                        delete cart[id];
                     }
-                }
-            });
-            
-            // Manejar envío del formulario
-            document.getElementById('cartForm').addEventListener('submit', function(e) {
-                e.preventDefault();
+                    
+                    return cartRef.set({
+                        items: cart,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                    });
+                }).then(() => {
+                    updateCartDisplay();
+                });
+            }
+        });
+        
+        // Manejar cambios directos en el input
+        document.addEventListener('change', function(e) {
+            if (e.target.classList.contains('quantity-input')) {
+                const row = e.target.closest('tr');
+                const id = row.dataset.id;
+                const newQuantity = parseInt(e.target.value);
                 
-                if (Object.keys(cart).length === 0) {
+                if (newQuantity > 0) {
+                    cartRef.get().then((doc) => {
+                        if (!doc.exists) return;
+                        
+                        const cart = doc.data().items || {};
+                        cart[id].quantity = newQuantity;
+                        
+                        return cartRef.set({
+                            items: cart,
+                            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+                        });
+                    }).then(() => {
+                        updateCartDisplay();
+                    });
+                }
+            }
+        });
+        
+        // Manejar envío del formulario
+        document.getElementById('cartForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            cartRef.get().then((doc) => {
+                if (!doc.exists || Object.keys(doc.data().items || {}).length === 0) {
                     alert('Por favor agrega al menos un producto al carrito');
                     return;
                 }
                 
-                // Redirigir al formulario de pedido
-                window.location.href = 'pedido.html';
+                // Redirigir al formulario de pedido con el ID del carrito
+                window.location.href = `pedido.html?cartId=${cartId}`;
             });
         });
-    </script>
+    });
+</script>
+
 </body>
 </html>
