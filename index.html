@@ -201,93 +201,113 @@ const firebaseConfig = {
         
         // Cargar carrito al iniciar
         loadCart();
+         
+    // Función para agregar al carrito (VERSIÓN CORREGIDA)
+    document.getElementById('addToCart').addEventListener('click', async function() {
+        const donaType = document.getElementById('donaType').value;
         
-document.getElementById('addToCart').addEventListener('click', async function() {
-    const donaType = document.getElementById('donaType').value;
-    
-    if (!donaType) {
-        alert('Por favor selecciona un tipo de dona');
-        return;
-    }
-    
-    try {
-        const doc = await cartRef.get();
-        let cart = doc.exists ? doc.data().items || [] : [];
-        
-        // Buscar si el producto ya está en el carrito
-        const existingItem = cart.find(item => item.id === donaType);
-        
-        if (existingItem) {
-            existingItem.quantity += 1;
-        } else {
-            cart.push({
-                id: donaType,
-                name: donaNames[donaType],
-                price: donaPrices[donaType],
-                quantity: 1
-            });
+        if (!donaType) {
+            alert('Por favor selecciona un tipo de dona');
+            return;
         }
         
-        await cartRef.set({
-            items: cart,
-            lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        
-        console.log("Producto agregado correctamente");
-        updateCartDisplay();
-        document.getElementById('donaType').value = '';
-    } catch (error) {
-        console.error("Error al agregar producto:", error);
-        alert(`Error al agregar la dona: ${error.message}`);
+        try {
+            // Obtener el documento actual
+            const doc = await cartRef.get();
+            
+            // Crear o actualizar el carrito
+            let cart = doc.exists ? doc.data().items || [] : [];
+            
+            // Buscar si el producto ya existe
+            const itemIndex = cart.findIndex(item => item.id === donaType);
+            
+            if (itemIndex !== -1) {
+                // Incrementar cantidad si ya existe
+                cart[itemIndex].quantity += 1;
+            } else {
+                // Agregar nuevo item si no existe
+                cart.push({
+                    id: donaType,
+                    name: donaNames[donaType],
+                    price: donaPrices[donaType],
+                    quantity: 1
+                });
+            }
+            
+            // Guardar en Firestore
+            await cartRef.set({
+                items: cart,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            }, { merge: true });
+            
+            console.log('Producto agregado:', donaType);
+            updateCartDisplay();
+            document.getElementById('donaType').value = '';
+        } catch (error) {
+            console.error('Error al agregar producto:', error);
+            alert(`Error: ${error.message}\n\nVerifica la consola para más detalles.`);
+        }
+    });
+    
+    // Función para cargar el carrito
+    async function loadCart() {
+        try {
+            const doc = await cartRef.get();
+            if (doc.exists) {
+                updateCartDisplay();
+            }
+        } catch (error) {
+            console.error('Error al cargar carrito:', error);
+        }
     }
+    
+    // Función para actualizar la visualización (VERSIÓN CORREGIDA)
+    async function updateCartDisplay() {
+        try {
+            const doc = await cartRef.get();
+            const cartItems = document.getElementById('cartItems');
+            let total = 0;
+            
+            cartItems.innerHTML = '';
+            
+            if (!doc.exists || !doc.data().items || doc.data().items.length === 0) {
+                document.getElementById('totalAmount').textContent = 'Total: Q0.00';
+                return;
+            }
+            
+            const cart = doc.data().items;
+            
+            cart.forEach(product => {
+                const subtotal = product.price * product.quantity;
+                total += subtotal;
+                
+                const row = document.createElement('tr');
+                row.dataset.id = product.id;
+                row.innerHTML = `
+                    <td>${product.name}</td>
+                    <td>Q${product.price.toFixed(2)}</td>
+                    <td>
+                        <div class="quantity-selector">
+                            <button type="button" class="quantity-btn decrease">-</button>
+                            <input type="number" class="quantity-input" value="${product.quantity}" min="1">
+                            <button type="button" class="quantity-btn increase">+</button>
+                        </div>
+                    </td>
+                    <td>Q${subtotal.toFixed(2)}</td>
+                    <td><button type="button" class="remove-btn">✕</button></td>
+                `;
+                cartItems.appendChild(row);
+            });
+            
+            document.getElementById('totalAmount').textContent = `Total: Q${total.toFixed(2)}`;
+        } catch (error) {
+            console.error('Error al actualizar visualización:', error);
+        }
+    }
+    
+    // Resto de tus funciones (manejo de cantidad, eliminación, etc.)
+    // ... (mantén el código que ya tienes para estos eventos)
 });
-        
-        // Cargar carrito desde Firestore
-        function loadCart() {
-            cartRef.get().then((doc) => {
-                if (doc.exists) {
-                    updateCartDisplay();
-                }
-            });
-        }
-        
-        // Actualizar la visualización del carrito
-        function updateCartDisplay() {
-            cartRef.get().then((doc) => {
-                const cartItems = document.getElementById('cartItems');
-                let total = 0;
-                
-                cartItems.innerHTML = '';
-                
-                if (!doc.exists) return;
-                
-                const cart = doc.data().items || {};
-                
-                for (const [id, product] of Object.entries(cart)) {
-                    const subtotal = product.price * product.quantity;
-                    total += subtotal;
-                    
-                    const row = document.createElement('tr');
-                    row.dataset.id = id;
-                    row.innerHTML = `
-                        <td>${product.name}</td>
-                        <td>Q${product.price.toFixed(2)}</td>
-                        <td>
-                            <div class="quantity-selector">
-                                <button type="button" class="quantity-btn decrease">-</button>
-                                <input type="number" class="quantity-input" value="${product.quantity}" min="1">
-                                <button type="button" class="quantity-btn increase">+</button>
-                            </div>
-                        </td>
-                        <td>Q${subtotal.toFixed(2)}</td>
-                        <td><button type="button" class="remove-btn">✕</button></td>
-                    `;
-                    cartItems.appendChild(row);
-                }
-                
-                document.getElementById('totalAmount').textContent = `Total: Q${total.toFixed(2)}`;
-            });
-        }
         
 // Manejar eventos de cantidad y eliminación
 document.addEventListener('click', function(e) {
