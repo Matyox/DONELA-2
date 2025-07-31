@@ -340,21 +340,23 @@ return cartRef.set({
             }
         });
         
-        // Manejar envío del formulario
-        document.getElementById('cartForm').addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            cartRef.get().then((doc) => {
-                if (!doc.exists || Object.keys(doc.data().items || {}).length === 0) {
-                    alert('Por favor agrega al menos un producto al carrito');
-                    return;
-                }
-                
-                // Redirigir al formulario de pedido con el ID del carrito
-                window.location.href = `pedido.html?cartId=${cartId}`;
-            });
-        });
+// Manejar envío del formulario
+document.getElementById('cartForm').addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    cartRef.get().then((doc) => {
+        if (!doc.exists || Object.keys(doc.data().items || {}).length === 0) {
+            alert('Por favor agrega al menos un producto al carrito');
+            return;
+        }
+
+        // Debug y redirección
+        console.log("Redirigiendo a pedido.html con ID:", cartId); 
+        window.location.href = `pedido.html?cartId=${cartId}`;
+    }).catch(error => {
+        console.error("Error al verificar el carrito:", error);
     });
+});  
 </script>
 
 </body>
