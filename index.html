@@ -282,39 +282,41 @@ const firebaseConfig = {
             });
         }
         
-        // Manejar eventos de cantidad y eliminación
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('increase') || 
-                e.target.classList.contains('decrease') || 
-                e.target.classList.contains('remove-btn')) {
-                
-                const row = e.target.closest('tr');
-                if (!row) return;
-                
-                const id = row.dataset.id;
-                
-                cartRef.get().then((doc) => {
-                    if (!doc.exists) return;
-                    
-                    const cart = doc.data().items || {};
-                    
-                    if (e.target.classList.contains('increase')) {
-                        cart[id].quantity += 1;
-                    } else if (e.target.classList.contains('decrease')) {
-                        if (cart[id].quantity > 1) {
-                            cart[id].quantity -= 1;
-                        }
-                    } else if (e.target.classList.contains('remove-btn')) {
-                        delete cart[id];
-                    }
-                    
-return cartRef.set({
-    items: cart,
-    lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
-}).then(() => {
-    updateCartDisplay();
-}).catch(error => alert("Error al guardar: " + error));  // <-- ¡Sin punto antes de .catch!
+// Manejar eventos de cantidad y eliminación
+document.addEventListener('click', function(e) {
+    if (e.target.classList.contains('increase') || 
+        e.target.classList.contains('decrease') || 
+        e.target.classList.contains('remove-btn')) {
         
+        const row = e.target.closest('tr');
+        if (!row) return;
+        
+        const id = row.dataset.id;
+        
+        cartRef.get().then((doc) => {
+            if (!doc.exists) return;
+            
+            const cart = doc.data().items || {};
+            
+            if (e.target.classList.contains('increase')) {
+                cart[id].quantity += 1;
+            } else if (e.target.classList.contains('decrease')) {
+                if (cart[id].quantity > 1) {
+                    cart[id].quantity -= 1;
+                }
+            } else if (e.target.classList.contains('remove-btn')) {
+                delete cart[id];
+            }
+            
+            return cartRef.set({
+                items: cart,
+                lastUpdated: firebase.firestore.FieldValue.serverTimestamp()
+            }).then(() => {
+                updateCartDisplay();
+            }).catch(error => alert("Error al guardar: " + error));
+        });
+    }
+});
         // Manejar cambios directos en el input
         document.addEventListener('change', function(e) {
             if (e.target.classList.contains('quantity-input')) {
